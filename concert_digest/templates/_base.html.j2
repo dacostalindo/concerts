@@ -1,0 +1,103 @@
+{# Shared look: Concertje's near-black canvas, white type, serif display,
+   uppercase tracked labels and white pill buttons. Email-safe: tables + inline styles. #}
+{% set SERIF = "'Redaction 35','Redaction',Georgia,'Times New Roman',serif" %}{# small type, as on Concertje #}
+{% set DISPLAY = "'Redaction','Redaction 35',Georgia,'Times New Roman',serif" %}{# headlines #}
+{% set SANS = "Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" %}
+{% set MONO = "'NG Generation Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" %}
+{% set BG = "#0a0a0a" %}{% set CARD = "#171717" %}{% set LINE = "#262626" %}
+{% set MUTED = "#a1a1a1" %}{% set SOFT = "#d4d4d4" %}{% set DIM = "#737373" %}
+{% set AMBER = "#fcbb00" %}{% set GREEN = "#05df72" %}{% set RED = "#ff6568" %}
+{% set STATE_COLOR = {"onsale": GREEN, "soon": AMBER, "soldout": RED, "tba": MUTED, "cancelled": DIM} %}
+
+{% macro label(text, color=MUTED, size=11) -%}
+<span style="font-family:{{ MONO }};font-size:{{ size }}px;line-height:16px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ color }};">{{ text }}</span>
+{%- endmacro %}
+
+{% macro chip(text, color=SOFT, border="#404040") -%}
+<span style="display:inline-block;margin:0 6px 6px 0;padding:5px 11px;border:1px solid {{ border }};border-radius:999px;font-family:{{ SANS }};font-size:11px;line-height:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:{{ color }};white-space:nowrap;">{{ text }}</span>
+{%- endmacro %}
+
+{% macro button(text, href, primary=True, small=False) -%}
+{% set pad = "9px 16px" if small else "13px 22px" %}
+<a href="{{ href }}" target="_blank" style="display:inline-block;margin:0 8px 8px 0;padding:{{ pad }};border-radius:999px;font-family:{{ SANS }};font-size:{{ 13 if small else 14 }}px;line-height:16px;font-weight:800;text-decoration:none;white-space:nowrap;{% if primary %}background:#ffffff;color:#0a0a0a;border:1px solid #ffffff;{% else %}background:transparent;color:#ffffff;border:1px solid #525252;{% endif %}">{{ text }}</a>
+{%- endmacro %}
+
+{# Concertje's concert tile ("Recently announced" grid): edge-to-edge photo,
+   bottom fade, serif date, heavy Inter name, pin + venue, pills on top. #}
+{% set PIN %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>{% endset %}
+
+{% macro pill(text, dot="", text_color="#d4d4d4") -%}
+<span style="display:inline-block;height:32px;line-height:32px;padding:0 12px;border-radius:999px;background:rgba(0,0,0,.6);font-family:{{ SANS }};font-size:11px;font-weight:700;letter-spacing:.05em;color:{{ text_color }};white-space:nowrap;">{% if dot %}<span style="color:{{ dot }};">&#9679;</span>&nbsp;{% endif %}{{ text }}</span>
+{%- endmacro %}
+
+{% macro tile(img, href, kicker, name, sub, pin=True, right="", right_dot="", left="", height=400, name_size=20, cls="tile", style="") -%}
+<td class="{{ cls }}" valign="bottom" background="{{ img }}" bgcolor="{{ CARD }}" height="{{ height }}" style="height:{{ height }}px;padding:0;background-color:{{ CARD }};{% if img %}background-image:url('{{ img }}');background-size:cover;background-position:center center;background-repeat:no-repeat;{% endif %}{{ style }}">
+<a href="{{ href }}" target="_blank" style="display:block;color:#ffffff;text-decoration:none;">
+<table role="presentation" class="{{ cls }}" width="100%" height="{{ height }}" cellpadding="0" cellspacing="0" border="0" style="height:{{ height }}px;background-image:linear-gradient(to top,rgba(0,0,0,.8) 0%,rgba(0,0,0,.2) 50%,rgba(0,0,0,0) 100%);">
+  <tr><td class="tile-top" valign="top" style="padding:16px 16px 0;height:32px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td align="left" valign="top">{% if left %}{{ pill(left, "", AMBER) }}{% endif %}</td>
+      <td align="right" valign="top">{% if right %}{{ pill(right, right_dot) }}{% endif %}</td>
+    </tr></table>
+  </td></tr>
+  <tr><td class="tile-bottom" valign="bottom" style="padding:0 16px 16px;">
+    {% if kicker %}<p style="margin:0 0 6px;font-family:{{ SERIF }};font-size:13px;line-height:15px;font-weight:500;color:rgba(255,255,255,.8);">{{ kicker }}</p>{% endif %}
+    <p class="{{ cls }}-name" style="margin:0 0 6px;font-family:{{ SANS }};font-size:{{ name_size }}px;line-height:1.25;font-weight:800;letter-spacing:-.01em;color:#ffffff;">{{ name }}</p>
+    {% if sub %}<p style="margin:0;font-family:{{ SANS }};font-size:12px;line-height:16px;font-weight:500;color:rgba(255,255,255,.6);">{% if pin %}{{ PIN }}{% endif %}{{ sub }}</p>{% endif %}
+  </td></tr>
+</table>
+</a>
+</td>
+{%- endmacro %}
+
+{% macro head(title, preheader) -%}
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>{{ title }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/redaction@5.2.5/400.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/redaction-35@5.2.5/400.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/redaction-35@5.2.5/400-italic.css" rel="stylesheet">
+<style>
+  body { margin:0; padding:0; background:{{ BG }}; }
+  a { color:#ffffff; }
+  @media (max-width:620px) {
+    .wrap { width:100% !important; }
+    .pad { padding-left:20px !important; padding-right:20px !important; }
+    .hero { font-size:36px !important; line-height:40px !important; }
+    .artist { font-size:28px !important; line-height:32px !important; }
+    .stack { display:block !important; width:100% !important; }
+    .outer { padding:16px 0 40px !important; }
+    .tile { height:260px !important; }
+    .tile-big { height:360px !important; }
+    .tile-name { font-size:17px !important; }
+    .tile-big-name { font-size:26px !important; }
+    .tile-top { padding:12px 12px 0 !important; }
+    .tile-bottom { padding:0 12px 12px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:{{ BG }};" bgcolor="{{ BG }}">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{{ BG }};">{{ preheader }}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ BG }}" style="background:{{ BG }};">
+<tr><td class="outer" align="center" style="padding:24px 12px 48px;">
+<table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+{%- endmacro %}
+
+{% macro foot(note) -%}
+<tr><td class="pad" style="padding:36px 32px 0;border-top:1px solid {{ LINE }};">
+  <p style="margin:0 0 10px;font-family:{{ DISPLAY }};font-size:22px;line-height:26px;color:#ffffff;">concert digest</p>
+  <p style="margin:0 0 14px;font-family:{{ SANS }};font-size:12px;line-height:19px;color:{{ DIM }};">{{ note }}</p>
+  <p style="margin:0;font-family:{{ SANS }};font-size:12px;line-height:19px;color:{{ DIM }};">Concert data from <a href="https://concertje.be" style="color:{{ MUTED }};">Concertje</a>. Reviews belong to their publications; follow the links to read them in full.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+{%- endmacro %}

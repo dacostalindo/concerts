@@ -1,0 +1,129 @@
+{% import "_base.html.j2" as ui with context %}
+{% set S = ui %}
+{{ ui.head("Concert Digest", preheader) }}
+
+{# ---------- Masthead ---------- #}
+<tr><td class="pad" style="padding:8px 32px 28px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td align="left">{{ ui.label("Concert Digest", "#ffffff") }}</td>
+    <td align="right">{{ ui.label("Week " ~ week ~ " · " ~ (today | day)) }}</td>
+  </tr></table>
+</td></tr>
+
+{% if preview_note %}
+<tr><td class="pad" style="padding:0 32px 20px;">
+  <div style="padding:10px 14px;border:1px dashed {{ S.AMBER }};font-family:{{ S.SANS }};font-size:12px;line-height:18px;color:{{ S.AMBER }};">{{ preview_note }}</div>
+</td></tr>
+{% endif %}
+
+<tr><td class="pad" style="padding:0 32px 12px;">
+  <h1 class="hero" style="margin:0;font-family:{{ S.DISPLAY }};font-weight:400;font-size:46px;line-height:50px;letter-spacing:-.01em;color:#ffffff;">The critics loved them. Now they&rsquo;re coming to Belgium.</h1>
+</td></tr>
+<tr><td class="pad" style="padding:0 32px 28px;">
+  <p style="margin:0;font-family:{{ S.SANS }};font-size:15px;line-height:24px;color:{{ S.MUTED }};">
+    {{ n_picks }} acclaimed record{{ "s" if n_picks != 1 }}, {{ n_shows }} Belgian show{{ "s" if n_shows != 1 }}. Picked from this month&rsquo;s reviews in {{ sources_line }}.
+  </p>
+</td></tr>
+
+{# ---------- Compact grid: Concertje's 2-up tiles, edge to edge, 1px seams ---------- #}
+<tr><td class="pad" style="padding:0 32px 12px;border-top:1px solid {{ S.LINE }};">
+  <p style="margin:18px 0 0;font-family:{{ S.SANS }};font-size:13px;line-height:16px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;">Coming to Belgium</p>
+</td></tr>
+<tr><td style="padding:0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ S.LINE }}" style="background:{{ S.LINE }};table-layout:fixed;">
+    {% for row in tile_rows %}
+    <tr>
+      {% for t in row %}
+      {{ ui.tile(t.image, t.c.concertje_url or (t.t.buttons[0].href if t.t.buttons else ""),
+                 t.c.date | longday, t.artist, t.c.venue,
+                 right=t.pill, right_dot=S.STATE_COLOR[t.t.state],
+                 left=("%.1f" | format(t.score)) if t.score is not none else "",
+                 style="width:50%;" ~ ("border-right:1px solid " ~ S.LINE ~ ";" if loop.first else "")) }}
+      {% endfor %}
+      {% if row | length == 1 %}<td class="tile" width="50%" height="400" bgcolor="{{ S.BG }}" style="width:50%;height:400px;background:{{ S.BG }};"></td>{% endif %}
+    </tr>
+    {% if not loop.last %}<tr><td colspan="2" height="1" style="height:1px;line-height:1px;font-size:1px;background:{{ S.LINE }};">&nbsp;</td></tr>{% endif %}
+    {% endfor %}
+  </table>
+</td></tr>
+
+{# ---------- Artist sections: a full-width tile, then the details ---------- #}
+{% for card in cards %}
+{% set p = card.p %}
+{% set albums_reviewed = p.reviews | map(attribute="album") | select | unique | list %}
+{% set accolade = p.reviews | map(attribute="accolade") | select | first %}
+<tr><td style="padding:{{ '40px' if loop.first else '0' }} 0 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ S.BG }}" style="background:{{ S.BG }};border-bottom:1px solid {{ S.LINE }};table-layout:fixed;">
+  <tr>
+    {{ ui.tile(p.image | sized(1200), (p.reviews[0].url), albums_reviewed | join(" / "), p.artist,
+               p.genres | join(" · "), pin=False,
+               left=("%.1f" | format(p.score)) if p.score is not none else "",
+               right=accolade or "", right_dot=S.AMBER if accolade else "",
+               height=440, name_size=32, cls="tile-big") }}
+  </tr>
+
+  {# Per-publication scores #}
+  <tr><td class="pad" style="padding:18px 24px 4px;">
+    {% for r in p.reviews %}
+    <a href="{{ r.url }}" target="_blank" style="display:inline-block;margin:0 6px 6px 0;padding:0 12px;height:30px;line-height:30px;border-radius:999px;background:{{ S.CARD }};border:1px solid {{ S.LINE }};text-decoration:none;font-family:{{ S.SANS }};font-size:12px;color:#ffffff;white-space:nowrap;"><span style="font-weight:800;">{{ r.source }}</span>{% if r.score_label %}&nbsp; <span style="color:{{ S.AMBER }};font-weight:700;">{{ r.score_label }}</span>{% endif %}{% if r.accolade and r.accolade != r.score_label %}&nbsp; <span style="color:{{ S.AMBER }};font-weight:700;">· {{ r.accolade }}</span>{% endif %}</a>
+    {% endfor %}
+  </td></tr>
+
+  {# Bio + critic quote #}
+  <tr><td class="pad" style="padding:10px 24px 0;">
+    {% if p.bio %}
+    <p style="margin:0 0 16px;font-family:{{ S.SANS }};font-size:14px;line-height:22px;color:{{ S.SOFT }};">{{ p.bio }}</p>
+    {% endif %}
+    {% if card.quote %}
+    <p style="margin:0 0 4px;font-family:{{ S.SERIF }};font-size:18px;line-height:25px;color:#ffffff;">&ldquo;{{ card.quote.blurb }}&rdquo;</p>
+    <p style="margin:0;font-family:{{ S.SANS }};font-size:12px;line-height:16px;font-weight:500;color:rgba(255,255,255,.6);">{{ card.quote.source }}</p>
+    {% endif %}
+  </td></tr>
+
+  {# Listen: compact rows #}
+  {% if p.albums %}
+  <tr><td class="pad" style="padding:22px 24px 0;">
+    <p style="margin:0 0 4px;font-family:{{ S.SANS }};font-size:11px;line-height:16px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ S.MUTED }};">Listen</p>
+    {% for a in p.albums %}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:{{ '0' if loop.first else '1px solid ' ~ S.LINE }};"><tr>
+      <td width="64" valign="middle" style="padding:10px 14px 10px 0;">
+        {% if a.artwork %}<img src="{{ a.artwork }}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border:0;">
+        {% else %}<div style="width:64px;height:64px;background:{{ S.CARD }};text-align:center;font-family:{{ S.SERIF }};font-size:26px;line-height:64px;color:{{ S.AMBER }};">&#9835;</div>{% endif %}
+      </td>
+      <td valign="middle" style="padding:10px 0;font-family:{{ S.SANS }};font-size:14px;line-height:18px;font-weight:800;color:#ffffff;">
+        {{ a.title }}{% if a.year %} <span style="font-family:{{ S.SERIF }};font-size:13px;font-weight:400;color:rgba(255,255,255,.6);">{{ a.year }}</span>{% endif %}
+        <div style="padding-top:8px;">
+          {% if a.apple_music_url %}<a href="{{ a.apple_music_url }}" target="_blank" style="display:inline-block;margin:0 6px 0 0;padding:0 12px;height:30px;line-height:30px;border-radius:999px;border:1px solid #525252;font-family:{{ S.SANS }};font-size:12px;font-weight:800;color:#ffffff;text-decoration:none;">Apple Music</a>{% endif %}
+          {% if a.spotify_url %}<a href="{{ a.spotify_url }}" target="_blank" style="display:inline-block;margin:0 6px 0 0;padding:0 12px;height:30px;line-height:30px;border-radius:999px;border:1px solid #525252;font-family:{{ S.SANS }};font-size:12px;font-weight:800;color:#ffffff;text-decoration:none;">Spotify</a>{% endif %}
+        </div>
+      </td>
+    </tr></table>
+    {% endfor %}
+  </td></tr>
+  {% endif %}
+
+  {# Shows: compact rows, Concertje date + venue, status and actions #}
+  <tr><td class="pad" style="padding:22px 24px 26px;">
+    <p style="margin:0 0 4px;font-family:{{ S.SANS }};font-size:11px;line-height:16px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ S.MUTED }};">In Belgium</p>
+    {% for item in card.concerts %}
+    {% set c = item.c %}{% set t = item.t %}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:{{ '0' if loop.first else '1px solid ' ~ S.LINE }};"><tr>
+      <td valign="top" style="padding:12px 0 6px;">
+        <p style="margin:0 0 4px;font-family:{{ S.SERIF }};font-size:13px;line-height:15px;color:rgba(255,255,255,.8);">{{ c.date | longday }}</p>
+        <p style="margin:0 0 4px;font-family:{{ S.SANS }};font-size:16px;line-height:20px;font-weight:800;color:#ffffff;">{{ c.venue }}</p>
+        <p style="margin:0 0 10px;font-family:{{ S.SANS }};font-size:12px;line-height:16px;font-weight:500;color:rgba(255,255,255,.6);">{{ S.PIN }}{{ c.city or c.venue }}{% if c.festival %} · {{ c.festival }}{% endif %}{% if t.detail %} · {{ t.detail }}{% endif %}</p>
+        {% for b in t.buttons %}{{ ui.button(b.label, b.href, b.primary, True) }}{% endfor %}
+        {% if c.concertje_url %}{{ ui.button("Concertje", c.concertje_url, False, True) }}{% endif %}
+      </td>
+      <td valign="top" align="right" width="1" style="padding:12px 0 0 10px;white-space:nowrap;">
+        <span style="display:inline-block;height:28px;line-height:28px;padding:0 11px;border-radius:999px;background:{{ S.CARD }};font-family:{{ S.SANS }};font-size:11px;font-weight:700;letter-spacing:.05em;color:#d4d4d4;"><span style="color:{{ S.STATE_COLOR[t.state] }};">&#9679;</span>&nbsp;{{ item.pill }}</span>
+      </td>
+    </tr></table>
+    {% endfor %}
+  </td></tr>
+</table>
+</td></tr>
+{% endfor %}
+
+<tr><td style="padding:40px 0 0;"></td></tr>
+{{ ui.foot("“Remind me” opens an email to yourself. Send it, and the next run puts the show on your watchlist: you’ll get a heads-up the day before tickets drop and an email with the ticket link the moment they go live.") }}

@@ -1,0 +1,36 @@
+{% import "_base.html.j2" as ui with context %}
+{% set S = ui %}
+{% set accent = S.GREEN if kind in ("on_sale", "already_on_sale") else S.AMBER %}
+{{ ui.head("Concert Digest", message) }}
+<tr><td class="pad" style="padding:8px 32px 28px;">{{ ui.label("Concert Digest · Watchlist", "#ffffff") }}</td></tr>
+<tr><td style="padding:0 0 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{{ S.CARD }};border:1px solid {{ S.LINE }};" bgcolor="{{ S.CARD }}">
+  <tr><td class="pad" style="padding:32px 32px 8px;">
+    {{ ui.label("● " ~ kicker, accent, 12) }}
+    <h1 class="hero" style="margin:14px 0 10px;font-family:{{ S.DISPLAY }};font-weight:400;font-size:44px;line-height:48px;color:#ffffff;">{{ w.artist }}</h1>
+    <p style="margin:0 0 22px;font-family:{{ S.SANS }};font-size:15px;line-height:24px;color:{{ S.SOFT }};">{{ message }}</p>
+  </td></tr>
+  <tr><td class="pad" style="padding:0 32px 28px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:{{ S.BG }};border:1px solid {{ S.LINE }};" bgcolor="{{ S.BG }}"><tr>
+      <td width="76" valign="top" align="center" style="padding:18px 0 16px;border-right:1px solid {{ S.LINE }};">
+        {{ ui.label(show_date.strftime("%b"), S.MUTED, 10) }}<br>
+        <span style="font-family:{{ S.SERIF }};font-size:38px;line-height:42px;color:#ffffff;">{{ show_date.day }}</span><br>
+        {{ ui.label(show_date.strftime("%a"), S.DIM, 10) }}
+      </td>
+      <td valign="middle" style="padding:16px 18px;">
+        <p style="margin:0 0 2px;font-family:{{ S.SANS }};font-size:16px;line-height:21px;font-weight:800;color:#ffffff;">{{ w.venue }}<span style="font-weight:500;color:{{ S.MUTED }};">, {{ w.city }}</span></p>
+        {% if w.title | lower != w.artist | lower %}<p style="margin:0;font-family:{{ S.SANS }};font-size:12px;line-height:18px;color:{{ S.DIM }};">{{ w.title }}</p>{% endif %}
+        {% if extra %}<p style="margin:6px 0 0;font-family:{{ S.SANS }};font-size:12px;line-height:18px;color:{{ S.MUTED }};">{{ extra }}</p>{% endif %}
+      </td>
+    </tr></table>
+    <div style="padding-top:22px;">
+      {% if buy %}{{ ui.button("Buy tickets  →" if kind in ("on_sale", "already_on_sale") else "Ticket page", buy, True) }}{% endif %}
+      {% if w.concertje_url and w.concertje_url != buy %}{{ ui.button("Concertje", w.concertje_url, False) }}{% endif %}
+    </div>
+  </td></tr>
+</table>
+</td></tr>
+<tr><td class="pad" style="padding:0 32px 8px;">
+  <p style="margin:0;font-family:{{ S.SANS }};font-size:12px;line-height:19px;color:{{ S.DIM }};">Changed your mind? <a href="{{ unwatch }}" style="color:{{ S.MUTED }};">Stop watching this show</a>.</p>
+</td></tr>
+{{ ui.foot("You're getting this because you asked Concert Digest to watch this show.") }}
