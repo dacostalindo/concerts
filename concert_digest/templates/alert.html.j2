@@ -1,0 +1,25 @@
+{% import "_base.html.j2" as ui with context %}
+{% set S = ui %}
+{% set accent = S.GREEN if kind == "on_sale_now" else S.AMBER %}
+{{ ui.head("Concert Digest", message) }}
+<tr><td class="pad" style="padding:8px 32px 24px;">{{ ui.label("Concert Digest · Tickets", "#ffffff") }}</td></tr>
+<tr><td style="padding:0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ S.BG }}" style="background:{{ S.BG }};border-bottom:1px solid {{ S.LINE }};table-layout:fixed;">
+  <tr>
+    {{ ui.tile(image, show.concertje_url or show.ticket_url, show.date | longday, artist, show.venue ~ (", " ~ show.city if show.city else ""),
+               right=kicker, right_dot=accent, height=440, name_size=32, cls="tile-big") }}
+  </tr>
+  <tr><td class="pad" style="padding:22px 24px 26px;">
+    <p style="margin:0 0 6px;font-family:{{ S.DISPLAY }};font-size:22px;line-height:28px;color:#ffffff;">{{ message }}</p>
+    {% if show.festival %}<p style="margin:0 0 4px;font-family:{{ S.SANS }};font-size:12px;line-height:18px;color:rgba(255,255,255,.6);">{{ show.festival }}</p>{% endif %}
+    {% if extra %}<p style="margin:0 0 4px;font-family:{{ S.SANS }};font-size:12px;line-height:18px;color:rgba(255,255,255,.6);">{{ extra }}</p>{% endif %}
+    {% if show.price %}<p style="margin:0 0 4px;font-family:{{ S.SANS }};font-size:12px;line-height:18px;color:rgba(255,255,255,.6);">From {{ show.price }}</p>{% endif %}
+    <div style="padding-top:16px;">
+      {% for b in buttons %}{{ ui.button(b.label, b.href, b.primary) }}{% endfor %}
+      {% if show.concertje_url %}{{ ui.button("Concertje", show.concertje_url, False) }}{% endif %}
+    </div>
+  </td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:40px 0 0;"></td></tr>
+{{ ui.foot("Ticket alert from Concert Digest.") }}
