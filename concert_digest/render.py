@@ -1,18 +1,14 @@
-"""Turns picks into the Concertje-styled HTML email (plus a plain-text part)."""
+"""Renders the Concertje-styled digest and alert emails from tool inputs."""
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlencode
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .config import Settings
-from .mailer import watch_mailto
-from .models import Concert, Pick
-from .state import Watch
-
-SOURCES_LINE = "Pitchfork, Stereogum, The Guardian, NME, Rolling Stone, The Quietus and Clash"
+from .models import TZ, Alert, Artist, Digest, Show
 
 env = Environment(
     loader=FileSystemLoader(Path(__file__).parent / "templates"),
@@ -27,7 +23,7 @@ def fmt_day(d: date | datetime) -> str:
 
 
 def fmt_moment(dt: datetime) -> str:
-    return f"{fmt_day(dt)} · {dt:%H:%M}"
+    return f"{fmt_day(dt.astimezone(TZ))} · {dt.astimezone(TZ):%H:%M}"
 
 
 def fmt_longday(d: date | datetime) -> str:
@@ -42,98 +38,133 @@ def sized(url: str, width: int = 640) -> str:
     return url
 
 
-def status_pill(c: Concert, state: str) -> str:
-    """Wording of the status pill on Concertje's tiles ('On sale 23 Oct')."""
-    if state == "soon" and c.on_sale_at:
-        return f"On sale {c.on_sale_at.day} {c.on_sale_at:%b}"
-    return {"onsale": "On sale", "soon": "On sale soon", "soldout": "Sold out",
-            "tba": "Sale TBA", "cancelled": "Cancelled"}[state]
-
-
 env.filters["day"] = fmt_day
 env.filters["moment"] = fmt_moment
 env.filters["longday"] = fmt_longday
 env.filters["sized"] = sized
 
+STATE = {"on_sale": "onsale", "upcoming": "soon", "not_announced": "tba", "sold_out": "soldout", "cancelled": "cancelled"}
 
-def ticket_view(c: Concert, now: datetime, settings: Settings, artist: str) -> dict:
-    """What the ticket box says and which buttons it shows."""
-    label = f"{artist} @ {c.venue} · {fmt_day(c.date)}"
-    watch = watch_mailto(settings, c.id, label)
-    upcoming_presales = [p for p in c.presales if p.starts_at and p.starts_at > now]
-    if c.ticket_status in {"cancelled", "canceled"}:
-        return {"state": "cancelled", "headline": "Cancelled", "detail": "", "buttons": []}
-    if c.is_sold_out():
-        buttons = [{"label": "Resale on TicketSwap", "href": c.resale_url, "primary": True}] if c.resale_url else []
-        return {"state": "soldout", "headline": "Sold out", "detail": "", "buttons": buttons}
-    if c.is_on_sale(now):
-        detail = f"From {c.price}" if c.price else ""
-        href = c.ticket_url or c.concertje_url
-        return {"state": "onsale", "headline": "Tickets on sale now", "detail": detail,
+
+def calendar_link(artist: str, show: Show, when: datetime) -> str:
+    """Google Calendar event at the moment tickets go on sale."""
+    start = when.astimezone(timezone.utc)
+    end = start + timedelta(minutes=30)
+    details = f"Tickets for {artist} at {show.venue} ({fmt_longday(show.date)}) go on sale now."
+    if show.ticket_url or show.concertje_url:
+        details += f"\n{show.ticket_url or show.concertje_url}"
+    return "https://calendar.google.com/calendar/render?" + urlencode({
+        "action": "TEMPLATE",
+        "text": f"Tickets: {artist} @ {show.venue}",
+        "dates": f"{start:%Y%m%dT%H%M%SZ}/{end:%Y%m%dT%H%M%SZ}",
+        "details": details,
+    })
+
+
+def status_pill(show: Show) -> str:
+    """Wording of the status pill on Concertje's tiles ('On sale 23 Oct')."""
+    if show.ticket_status == "upcoming" and show.on_sale_at:
+        local = show.on_sale_at.astimezone(TZ)
+        return f"On sale {local.day} {local:%b}"
+    return {"on_sale": "On sale", "upcoming": "On sale soon", "not_announced": "Sale TBA",
+            "sold_out": "Sold out", "cancelled": "Cancelled"}[show.ticket_status]
+
+
+def ticket_view(show: Show, artist: str, now: datetime) -> dict:
+    """What a show row says and which buttons it shows."""
+    status = show.ticket_status
+    if status == "upcoming" and show.on_sale_at and show.on_sale_at <= now:
+        status = "on_sale"  # the sale date has passed since the data was gathered
+    state = STATE[status]
+    if status == "cancelled":
+        return {"state": state, "detail": "", "buttons": []}
+    if status == "sold_out":
+        buttons = [{"label": "Resale on TicketSwap", "href": show.resale_url, "primary": True}] if show.resale_url else []
+        return {"state": state, "detail": "", "buttons": buttons}
+    if status == "on_sale":
+        href = show.ticket_url or show.concertje_url
+        return {"state": state, "detail": f"From {show.price}" if show.price else "",
                 "buttons": [{"label": "Buy tickets  →", "href": href, "primary": True}] if href else []}
-    if c.on_sale_at:
-        detail = "; ".join(f"{p.name} presale {fmt_moment(p.starts_at)}" for p in upcoming_presales)
-        return {"state": "soon", "headline": f"On sale {fmt_moment(c.on_sale_at)}", "detail": detail,
-                "buttons": [{"label": "Remind me & buy when live", "href": watch, "primary": True}]}
-    return {"state": "tba", "headline": "Ticket sale not announced yet", "detail": "We'll check every run.",
-            "buttons": [{"label": "Tell me when tickets drop", "href": watch, "primary": True}]}
+    if status == "upcoming":
+        presales = [p for p in show.presales if p.starts_at > now]
+        first = min([p.starts_at for p in presales] + [show.on_sale_at])
+        detail = "; ".join([f"General sale {fmt_moment(show.on_sale_at)}"]
+                           + [f"{p.name} presale {fmt_moment(p.starts_at)}" for p in presales])
+        return {"state": state, "detail": detail,
+                "buttons": [{"label": "Add on-sale reminder", "href": calendar_link(artist, show, first), "primary": True}]}
+    buttons = [{"label": "Follow on Concertje", "href": show.concertje_url, "primary": True}] if show.concertje_url else []
+    return {"state": state, "detail": "Ticket sale not announced yet", "buttons": buttons}
 
 
-def render_digest(picks: list[Pick], settings: Settings, now: datetime, preview_note: str = "") -> tuple[str, str, str]:
-    cards = []
-    tiles = []
-    for p in picks:
-        concerts = []
-        for c in p.concerts:
-            t = ticket_view(c, now, settings, p.artist)
-            concerts.append({"c": c, "t": t, "pill": status_pill(c, t["state"])})
-            tiles.append({"artist": p.artist, "c": c, "t": t, "pill": status_pill(c, t["state"]),
-                          "image": sized(c.image or p.image), "score": p.score})
-        quotes = sorted((r for r in p.reviews if r.blurb), key=lambda r: (r.source not in ("Pitchfork", "Stereogum"), -len(r.blurb)))
-        cards.append({"p": p, "concerts": concerts, "quote": quotes[0] if quotes else None})
+def artist_image(a: Artist) -> str:
+    """Press photo, else the first album cover that has artwork."""
+    return a.image_url or next((al.artwork_url for al in a.albums if al.artwork_url), "")
 
+
+def _intro(d: Digest) -> str:
+    if d.intro:
+        return d.intro
+    n_a, n_s = len(d.artists), sum(len(a.shows) for a in d.artists)
+    line = f"{n_a} acclaimed record{'s' if n_a != 1 else ''}, {n_s} Belgian show{'s' if n_s != 1 else ''}."
+    if d.sources:
+        names = d.sources if len(d.sources) < 2 else [", ".join(d.sources[:-1]), d.sources[-1]]
+        line += f" Picked from this month’s reviews in {' and '.join(names)}."
+    return line
+
+
+def _quote(a: Artist):
+    quoted = [r for r in a.reviews if r.quote]
+    return max(quoted, key=lambda r: len(r.quote)) if quoted else None
+
+
+def render_digest(d: Digest, now: datetime | None = None, preview_note: str = "") -> tuple[str, str]:
+    """Returns (subject, html)."""
+    now = now or datetime.now(TZ)
+    cards, tiles = [], []
+    for a in d.artists:
+        shows = []
+        for s in sorted(a.shows, key=lambda s: s.date):
+            view = {"c": s, "t": ticket_view(s, a.name, now), "pill": status_pill(s)}
+            shows.append(view)
+            tiles.append({**view, "artist": a.name, "image": sized(s.image_url or artist_image(a)), "score": a.score})
+        cards.append({"p": a, "image": artist_image(a), "concerts": shows, "quote": _quote(a)})
     tiles.sort(key=lambda x: x["c"].date)
-    n_shows = sum(len(p.concerts) for p in picks)
-    week = now.isocalendar().week
-    subject = f"Critics' picks in Belgium · {picks[0].artist}" + (f" + {len(picks) - 1} more" if len(picks) > 1 else "")
-    ctx = {
-        "cards": cards,
-        "tile_rows": [tiles[i:i + 2] for i in range(0, len(tiles), 2)],  # Concertje's 2-up compact grid
-        "n_picks": len(picks),
-        "n_shows": n_shows,
-        "week": week,
-        "today": now,
-        "sources_line": SOURCES_LINE,
-        "preview_note": preview_note,
-        "preheader": ", ".join(p.artist for p in picks[:6]) + " — reviewed, rated and touring Belgium.",
-    }
-    html = env.get_template("digest.html.j2").render(**ctx)
-    text = env.get_template("digest.txt.j2").render(**ctx)
-    return f"[Concert Digest] {subject}", html, text
+
+    first = d.artists[0].name
+    subject = f"Critics' picks in Belgium · {first}" + (f" + {len(d.artists) - 1} more" if len(d.artists) > 1 else "")
+    html = env.get_template("digest.html.j2").render(
+        cards=cards,
+        tile_rows=[tiles[i:i + 2] for i in range(0, len(tiles), 2)],  # Concertje's 2-up compact grid
+        headline=d.headline,
+        intro=_intro(d),
+        week=now.isocalendar().week,
+        today=now,
+        preview_note=preview_note,
+        preheader=", ".join(a.name for a in d.artists[:6]) + " — reviewed, rated and touring Belgium.",
+    )
+    return subject, html
 
 
-def render_alert(kind: str, w: Watch, settings: Settings, extra: str = "") -> tuple[str, str, str]:
-    """kind: 'confirm' | 'heads_up' | 'on_sale' | 'already_on_sale'."""
-    when = datetime.fromisoformat(w.on_sale_at) if w.on_sale_at else None
-    copy = {
-        "confirm": ("Watching", f"We'll email you the moment tickets for {w.artist} go live"
-                    + (f" ({fmt_moment(when)})." if when else ".")),
-        "heads_up": ("Tomorrow", f"Tickets for {w.artist} go on sale {fmt_moment(when) if when else 'soon'}. Set an alarm."),
-        "on_sale": ("Tickets are live", f"Tickets for {w.artist} are on sale right now. Good shows sell out fast."),
-        "already_on_sale": ("Already on sale", f"Tickets for {w.artist} are already on sale, no need to wait."),
-    }[kind]
-    subjects = {
-        "confirm": f"Watching: {w.artist}, {w.venue}",
-        "heads_up": f"Tomorrow: tickets for {w.artist}",
-        "on_sale": f"Tickets on sale NOW: {w.artist}, {w.venue}",
-        "already_on_sale": f"Tickets already on sale: {w.artist}",
-    }
-    ctx = {
-        "kind": kind, "w": w, "kicker": copy[0], "message": copy[1], "extra": extra,
-        "show_date": date.fromisoformat(w.date),
-        "unwatch": watch_mailto(settings, w.event_id, f"{w.artist} @ {w.venue} · {fmt_day(date.fromisoformat(w.date))}", unwatch=True),
-        "buy": w.ticket_url or w.concertje_url,
-    }
-    html = env.get_template("alert.html.j2").render(**ctx)
-    text = f"{copy[0].upper()}\n\n{copy[1]}\n\n{w.artist}, {w.venue}, {w.city}, {w.date}\n{ctx['buy']}\n"
-    return f"[Concert Digest] {subjects[kind]}", html, text
+def render_alert(alert: Alert, now: datetime | None = None) -> tuple[str, str]:
+    """Returns (subject, html)."""
+    now = now or datetime.now(TZ)
+    s = alert.show
+    when = s.on_sale_at
+    if alert.kind == "on_sale_now":
+        kicker, subject = "Tickets are live", f"Tickets on sale now: {alert.artist}, {s.venue}"
+        message = alert.message or f"Tickets for {alert.artist} are on sale right now. Good shows sell out fast."
+        buttons = [{"label": "Buy tickets  →", "href": s.ticket_url or s.concertje_url, "primary": True}]
+    else:
+        kicker = f"On sale {fmt_moment(when)}" if when else "On sale soon"
+        subject = f"Tickets for {alert.artist} go on sale {fmt_moment(when) if when else 'soon'}"
+        message = alert.message or f"Tickets for {alert.artist} at {s.venue} go on sale {fmt_moment(when) if when else 'soon'}."
+        buttons = [{"label": "Add on-sale reminder", "href": calendar_link(alert.artist, s, when), "primary": True}] if when else []
+        if s.ticket_url:
+            buttons.append({"label": "Ticket page", "href": s.ticket_url, "primary": False})
+    presales = [f"{p.name} presale {fmt_moment(p.starts_at)}" for p in s.presales if p.starts_at > now]
+    html = env.get_template("alert.html.j2").render(
+        kind=alert.kind, artist=alert.artist, show=s, kicker=kicker, message=message,
+        extra=" · ".join(presales), image=sized(s.image_url or alert.image_url, 1200),
+        buttons=[b for b in buttons if b["href"]],
+    )
+    return subject, html

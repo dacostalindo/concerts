@@ -1,21 +1,21 @@
 [project]
 name = "concert-digest"
-version = "0.1.0"
-description = "Critics' picks from Pitchfork, Stereogum & co., matched against Belgian concerts on Concertje, delivered as an email."
+version = "0.2.0"
+description = "MCP tools for a Grok bot to render Concertje-styled concert emails: critics' picks playing Belgium."
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=2.3,<3",
     "httpx>=0.27",
-    "feedparser>=6.0",
-    "beautifulsoup4>=4.12",
     "jinja2>=3.1",
+    "pydantic>=2.7",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
 [project.scripts]
-concert-digest = "concert_digest.cli:main"
+concert-digest-mcp = "concert_digest.server:main"
 
 [build-system]
 requires = ["setuptools>=69"]

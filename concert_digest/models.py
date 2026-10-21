@@ -1,9 +1,19 @@
+"""Tool inputs. Field descriptions are what the calling model (Grok) reads,
+so they say where each value should come from."""
+
 from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass, field
 from datetime import date, datetime
+from typing import Literal
+from zoneinfo import ZoneInfo
+
+from pydantic import BaseModel, Field, model_validator
+
+TZ = ZoneInfo("Europe/Brussels")
+
+TicketStatus = Literal["on_sale", "upcoming", "not_announced", "sold_out", "cancelled"]
 
 
 def normalize_name(name: str) -> str:
@@ -16,92 +26,95 @@ def normalize_name(name: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
-@dataclass
-class Review:
-    source: str  # "Pitchfork"
-    artist: str
-    album: str
-    url: str
-    published: datetime | None = None
-    blurb: str = ""  # the critic's dek / standfirst
-    score: float | None = None  # normalised to /10
-    score_label: str = ""  # how the source shows it: "8.4", "★★★★☆", "Album of the Week"
-    accolade: str = ""  # "Best New Music", "Album of the Week", ...
-    genres: list[str] = field(default_factory=list)
-    image: str = ""
+class Review(BaseModel):
+    source: str = Field(description="Publication name, e.g. 'Pitchfork', 'Stereogum', 'NME', 'The Guardian'.")
+    url: str = Field(description="Link to the review.")
+    album: str = Field("", description="Title of the reviewed album.")
+    score_10: float | None = Field(
+        None, ge=0, le=10,
+        description="Score normalised to 0-10 (Pitchfork 8.4 -> 8.4; 4/5 stars -> 8.0). Omit if the review has no score.",
+    )
+    score_label: str = Field(
+        "", description="The score as the publication shows it: '8.4', '★★★★☆', 'A-'. Shown on the review pill.",
+    )
+    accolade: str = Field("", description="Badge such as 'Best New Music' or 'Album of the Week'. Empty if none.")
+    quote: str = Field("", max_length=400, description="One-sentence verdict from the review (its subheading or a short quote).")
 
 
-@dataclass
-class Presale:
-    name: str
-    starts_at: datetime | None
-
-
-@dataclass
-class Concert:
-    id: str
+class Album(BaseModel):
     title: str
+    year: str = ""
+    artwork_url: str = ""
+    apple_music_url: str = ""
+    spotify_url: str = ""
+
+
+class Presale(BaseModel):
+    name: str = Field(description="Who runs it: 'Artist', 'Venue', 'Live Nation', 'Spotify'...")
+    starts_at: datetime = Field(description="ISO 8601 with timezone, e.g. 2026-10-23T10:00:00+02:00.")
+
+
+class Show(BaseModel):
     date: date
     venue: str
-    city: str
-    artists: list[str]
-    concertje_url: str = ""
-    ticket_status: str = ""  # available | soldout | upcoming | cancelled | ...
-    ticket_url: str = ""
-    resale_url: str = ""
-    price: str = ""
-    on_sale_at: datetime | None = None
-    presales: list[Presale] = field(default_factory=list)
-    image: str = ""
-    genres: list[str] = field(default_factory=list)
-    spotify_url: str = ""
-    apple_music_url: str = ""
-    festival: str = ""
+    city: str = ""
+    festival: str = Field("", description="Festival name if the show is part of one.")
+    concertje_url: str = Field("", description="The show's page on concertje.be.")
+    image_url: str = Field("", description="Concert image (Concertje's event image); falls back to the artist image.")
+    ticket_status: TicketStatus = Field(
+        description="on_sale: buy now. upcoming: sale date announced (set on_sale_at). "
+        "not_announced: no sale date yet. sold_out. cancelled.",
+    )
+    ticket_url: str = Field("", description="Official ticket shop link.")
+    resale_url: str = Field("", description="Resale link (e.g. TicketSwap), used when sold out.")
+    on_sale_at: datetime | None = Field(None, description="When general sale opens, ISO 8601 with timezone. Required for 'upcoming'.")
+    presales: list[Presale] = Field(default_factory=list)
+    price: str = Field("", description="Display price, e.g. '€28,50'.")
 
-    def is_on_sale(self, now: datetime) -> bool:
-        if self.ticket_status in {"soldout", "sold_out", "cancelled", "canceled", "postponed"}:
-            return False
-        if self.on_sale_at:
-            return self.on_sale_at <= now
-        return self.ticket_status in {"available", "onsale", "on_sale", "low"}
-
-    def is_sold_out(self) -> bool:
-        return self.ticket_status in {"soldout", "sold_out"}
-
-
-@dataclass
-class Album:
-    title: str
-    apple_music_url: str = ""
-    spotify_url: str = ""
-    artwork: str = ""
-    year: str = ""
+    @model_validator(mode="after")
+    def _upcoming_needs_date(self) -> "Show":
+        if self.ticket_status == "upcoming" and not self.on_sale_at:
+            raise ValueError("ticket_status 'upcoming' needs on_sale_at (use 'not_announced' if the date is unknown)")
+        for field in ("on_sale_at",):
+            v = getattr(self, field)
+            if v is not None and v.tzinfo is None:
+                setattr(self, field, v.replace(tzinfo=TZ))
+        for p in self.presales:
+            if p.starts_at.tzinfo is None:
+                p.starts_at = p.starts_at.replace(tzinfo=TZ)
+        return self
 
 
-@dataclass
-class Pick:
-    """One artist in the digest: their reviews, records and Belgian shows."""
-
-    artist: str
-    reviews: list[Review]
-    concerts: list[Concert]
-    bio: str = ""
-    genres: list[str] = field(default_factory=list)
-    albums: list[Album] = field(default_factory=list)
-    artist_apple_url: str = ""
-    artist_spotify_url: str = ""
+class Artist(BaseModel):
+    name: str
+    image_url: str = Field("", description="Press photo or album cover for the artist tile.")
+    bio: str = Field("", max_length=700, description="Two or three sentences on who they are and what they sound like.")
+    genres: list[str] = Field(default_factory=list, max_length=4, description="Up to 4 genres, e.g. ['Indie', 'Post-punk'].")
+    reviews: list[Review] = Field(min_length=1)
+    albums: list[Album] = Field(
+        default_factory=list, max_length=4,
+        description="Reviewed album first, then other records. Use the lookup_album_links tool to fill this.",
+    )
+    shows: list[Show] = Field(min_length=1, description="Upcoming shows in Belgium.")
 
     @property
     def score(self) -> float | None:
-        scores = [r.score for r in self.reviews if r.score is not None]
+        scores = [r.score_10 for r in self.reviews if r.score_10 is not None]
         return round(sum(scores) / len(scores), 1) if scores else None
 
-    @property
-    def image(self) -> str:
-        for c in self.concerts:
-            if c.image:
-                return c.image
-        for r in self.reviews:
-            if r.image:
-                return r.image
-        return self.albums[0].artwork if self.albums else ""
+
+class Digest(BaseModel):
+    artists: list[Artist] = Field(min_length=1, max_length=20, description="Best-reviewed first.")
+    headline: str = Field("The critics loved them. Now they’re coming to Belgium.", max_length=120)
+    intro: str = Field("", max_length=400, description="One or two sentences under the headline. Default: a count of records and shows.")
+    sources: list[str] = Field(default_factory=list, description="Publications you read, for the intro line.")
+
+
+class Alert(BaseModel):
+    kind: Literal["on_sale_now", "on_sale_soon"] = Field(
+        description="on_sale_now: tickets just went live. on_sale_soon: reminder before the sale opens.",
+    )
+    artist: str
+    show: Show
+    image_url: str = ""
+    message: str = Field("", max_length=300, description="Optional custom line; a default is written for each kind.")

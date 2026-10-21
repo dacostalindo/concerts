@@ -1,0 +1,135 @@
+{
+  "sources": [
+    "Pitchfork",
+    "NME",
+    "Rolling Stone",
+    "Stereogum"
+  ],
+  "artists": [
+    {
+      "name": "Fontaines D.C.",
+      "bio": "Fontaines D.C. are an Irish rock band formed in Dublin in 2014: Grian Chatten, Conor Curley, Conor Deegan III, Tom Coll and Carlos O'Connell.",
+      "genres": [
+        "Indie",
+        "Rock"
+      ],
+      "reviews": [
+        {
+          "source": "NME",
+          "url": "https://www.nme.com/reviews/album/fontaines-d-c-dopamine-chamber-album-review-3972863",
+          "album": "Dopamine Chamber",
+          "score_10": 10,
+          "score_label": "★★★★★",
+          "quote": "A doom-ridden escape from the band of the decade"
+        },
+        {
+          "source": "Rolling Stone",
+          "url": "https://www.rollingstone.com/music/music-album-reviews/fontaines-d-c-dopamine-chamber-album-review-1235637810/",
+          "album": "Dopamine Chamber",
+          "score_10": 8,
+          "score_label": "★★★★☆"
+        },
+        {
+          "source": "Pitchfork",
+          "url": "https://pitchfork.com/reviews/albums/fontaines-dc-dopamine-chamber/",
+          "album": "Dopamine Chamber",
+          "score_10": 7.8,
+          "score_label": "7.8",
+          "quote": "The Irish band’s fifth album balances profound cynicism and genuine beauty as its ice-hearted stadium rock grows to darkly apocalyptic proportions."
+        }
+      ],
+      "albums": [
+        {
+          "title": "Dopamine Chamber",
+          "apple_music_url": "https://music.apple.com/be/search?term=Fontaines%20D.C.%20Dopamine%20Chamber",
+          "spotify_url": "https://open.spotify.com/search/Fontaines%20D.C.%20Dopamine%20Chamber"
+        }
+      ],
+      "shows": [
+        {
+          "date": "2026-11-30",
+          "venue": "Ancienne Belgique",
+          "city": "Brussel",
+          "concertje_url": "https://concertje.be",
+          "ticket_status": "on_sale",
+          "ticket_url": "https://www.abconcerts.be",
+          "price": "€28,50"
+        }
+      ]
+    },
+    {
+      "name": "Rachel Chinouriri",
+      "bio": "Rachel Chinouriri is an English singer-songwriter and record producer whose second album turns heartbreak into sleek, funny indie-pop.",
+      "genres": [
+        "Pop",
+        "R&B"
+      ],
+      "reviews": [
+        {
+          "source": "Rolling Stone",
+          "url": "https://www.rollingstone.com/music/music-album-reviews/rachel-chinouriri-i-think-i-spoke-too-soon-album-review-1235637822/",
+          "album": "I Think I Spoke Too Soon",
+          "score_10": 9,
+          "score_label": "★★★★½"
+        },
+        {
+          "source": "Pitchfork",
+          "url": "https://pitchfork.com/reviews/albums/rachel-chinouriri-i-think-i-spoke-too-soon/",
+          "album": "I Think I Spoke Too Soon",
+          "score_10": 7.3,
+          "score_label": "7.3",
+          "quote": "The London pop singer mines the pitfalls of young womanhood for dramedy on her sleeker, more polished second record."
+        }
+      ],
+      "shows": [
+        {
+          "date": "2027-01-03",
+          "venue": "Botanique",
+          "city": "Brussel",
+          "concertje_url": "https://concertje.be",
+          "ticket_status": "upcoming",
+          "on_sale_at": "2026-10-24T10:00:00+02:00",
+          "presales": [
+            {
+              "name": "Artist",
+              "starts_at": "2026-10-23T10:00:00+02:00"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Josh Johnson",
+      "bio": "Josh Johnson is a Los Angeles saxophonist, producer and International Anthem regular whose records blur jazz, electronics and ambient music.",
+      "genres": [
+        "Jazz",
+        "Experimental"
+      ],
+      "reviews": [
+        {
+          "source": "Stereogum",
+          "url": "https://stereogum.com/2515021/album-of-the-week-josh-johnson-animative/reviews/album-of-the-week/",
+          "album": "Animative",
+          "score_label": "Album of the Week",
+          "accolade": "Album of the Week"
+        }
+      ],
+      "shows": [
+        {
+          "date": "2027-02-11",
+          "venue": "Handelsbeurs",
+          "city": "Gent",
+          "ticket_status": "not_announced",
+          "concertje_url": "https://concertje.be"
+        },
+        {
+          "date": "2027-02-12",
+          "venue": "Het Depot",
+          "city": "Leuven",
+          "ticket_status": "sold_out",
+          "resale_url": "https://www.ticketswap.be"
+        }
+      ]
+    }
+  ]
+}

@@ -17,11 +17,11 @@
 {% endif %}
 
 <tr><td class="pad" style="padding:0 32px 12px;">
-  <h1 class="hero" style="margin:0;font-family:{{ S.DISPLAY }};font-weight:400;font-size:46px;line-height:50px;letter-spacing:-.01em;color:#ffffff;">The critics loved them. Now they&rsquo;re coming to Belgium.</h1>
+  <h1 class="hero" style="margin:0;font-family:{{ S.DISPLAY }};font-weight:400;font-size:46px;line-height:50px;letter-spacing:-.01em;color:#ffffff;">{{ headline }}</h1>
 </td></tr>
 <tr><td class="pad" style="padding:0 32px 28px;">
   <p style="margin:0;font-family:{{ S.SANS }};font-size:15px;line-height:24px;color:{{ S.MUTED }};">
-    {{ n_picks }} acclaimed record{{ "s" if n_picks != 1 }}, {{ n_shows }} Belgian show{{ "s" if n_shows != 1 }}. Picked from this month&rsquo;s reviews in {{ sources_line }}.
+    {{ intro }}
   </p>
 </td></tr>
 
@@ -55,7 +55,7 @@
 <tr><td style="padding:{{ '40px' if loop.first else '0' }} 0 0;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ S.BG }}" style="background:{{ S.BG }};border-bottom:1px solid {{ S.LINE }};table-layout:fixed;">
   <tr>
-    {{ ui.tile(p.image | sized(1200), (p.reviews[0].url), albums_reviewed | join(" / "), p.artist,
+    {{ ui.tile(card.image | sized(1200), (p.reviews[0].url), albums_reviewed | join(" / "), p.name,
                p.genres | join(" · "), pin=False,
                left=("%.1f" | format(p.score)) if p.score is not none else "",
                right=accolade or "", right_dot=S.AMBER if accolade else "",
@@ -75,7 +75,7 @@
     <p style="margin:0 0 16px;font-family:{{ S.SANS }};font-size:14px;line-height:22px;color:{{ S.SOFT }};">{{ p.bio }}</p>
     {% endif %}
     {% if card.quote %}
-    <p style="margin:0 0 4px;font-family:{{ S.SERIF }};font-size:18px;line-height:25px;color:#ffffff;">&ldquo;{{ card.quote.blurb }}&rdquo;</p>
+    <p style="margin:0 0 4px;font-family:{{ S.SERIF }};font-size:18px;line-height:25px;color:#ffffff;">&ldquo;{{ card.quote.quote }}&rdquo;</p>
     <p style="margin:0;font-family:{{ S.SANS }};font-size:12px;line-height:16px;font-weight:500;color:rgba(255,255,255,.6);">{{ card.quote.source }}</p>
     {% endif %}
   </td></tr>
@@ -87,7 +87,7 @@
     {% for a in p.albums %}
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:{{ '0' if loop.first else '1px solid ' ~ S.LINE }};"><tr>
       <td width="64" valign="middle" style="padding:10px 14px 10px 0;">
-        {% if a.artwork %}<img src="{{ a.artwork }}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border:0;">
+        {% if a.artwork_url %}<img src="{{ a.artwork_url }}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border:0;">
         {% else %}<div style="width:64px;height:64px;background:{{ S.CARD }};text-align:center;font-family:{{ S.SERIF }};font-size:26px;line-height:64px;color:{{ S.AMBER }};">&#9835;</div>{% endif %}
       </td>
       <td valign="middle" style="padding:10px 0;font-family:{{ S.SANS }};font-size:14px;line-height:18px;font-weight:800;color:#ffffff;">
@@ -126,4 +126,4 @@
 {% endfor %}
 
 <tr><td style="padding:40px 0 0;"></td></tr>
-{{ ui.foot("“Remind me” opens an email to yourself. Send it, and the next run puts the show on your watchlist: you’ll get a heads-up the day before tickets drop and an email with the ticket link the moment they go live.") }}
+{{ ui.foot("“Add on-sale reminder” puts the ticket sale in your calendar, with the ticket link, at the moment it opens (or the first presale).") }}
